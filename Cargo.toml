@@ -1,0 +1,12 @@
+[package]
+name = "lib_aoc"
+version = "0.5.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/SomewhereOutInSpace/lib_aoc/"
+description = "A simple trait-based framework for the annual Advent of Code programming challenge."
+keywords = ["advent", "advent_of_code", "challenge", "problem", "framework"]
+
+[dependencies]
+colored = "2.0.0"
+seq-macro = "0.3.1"
