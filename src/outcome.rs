@@ -80,9 +80,9 @@ impl Display for Timings {
         };
 
         write_timing(&self.parsing, "Parsing")?;
-        write_timing(&self.part_one, "Parsing")?;
-        write_timing(&self.part_one, "Parsing")?;
-        write_timing(&self.part_one, "Parsing")?;
+        write_timing(&self.part_one, "Part 1")?;
+        write_timing(&self.part_two, "Part 2")?;
+        write_timing(&self.total, "Total")?;
 
         write!(f, "{}", output.trim())?;
         Ok(())
