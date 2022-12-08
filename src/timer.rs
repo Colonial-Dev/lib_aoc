@@ -1,7 +1,5 @@
 use std::time::{Instant, Duration};
 
-use colored::Colorize;
-
 pub struct Timer {
     start: Instant,
     prev: Instant,
@@ -19,6 +17,10 @@ impl Timer {
         }
     }
 
+    pub(crate) fn buffer(&self) -> &[(&'static str, Duration)] {
+        &self.buffer
+    }
+
     pub(crate) fn mark(&mut self, label: &'static str) {
         self.buffer.push((
             label,
@@ -32,22 +34,5 @@ impl Timer {
             label,
             self.start.elapsed()
         ));
-    }
-}
-
-impl std::fmt::Display for Timer {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let output = &self.buffer
-            .iter()
-            .map(|(label, time)| format!(
-                "{}: {} μs / {} ns\n",
-                label.bold(),
-                time.as_micros().to_string().green(),
-                time.as_nanos().to_string().green()
-            ))
-            .collect::<String>();
-        
-        write!(f, "{}", output.trim())?;
-        Ok(())
     }
 }

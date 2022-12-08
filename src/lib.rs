@@ -30,14 +30,17 @@
 //! (such as scraping the Advent of Code website directly) are certainly possible.
 //! ``` ignore
 //! impl Solver for Solutions {
-//!     fn load(day: u8, testing: bool) -> String {
-//!        let path = match testing {
-//!            false => Path::new("src/inputs").join(format!("{day:02}.txt")),
-//!            true => Path::new("src/inputs").join(format!("{day:02}_test.txt"))
-//!        };
-//! 
-//!        std::fs::read_to_string(path).expect("Puzzle input could not be read.")
-//!    }
+//!     fn load(day: u8) -> String {
+//!         std::fs::read_to_string(format!("src/inputs/{day:02}.txt"))
+//!             .expect("Puzzle input could not be read.")
+//!     }
+//!     
+//!     // Note that a test loading implementation can be elided if one is not desired;
+//!     // the default implementation will simply panic.
+//!     fn load_test(day: u8) -> String {
+//!         std::fs::read_to_string(format!("src/inputs/test_{day:02}.txt"))
+//!             .expect("Puzzle input could not be read.")
+//!     }
 //! }
 //! ```
 //! With [`Solver`] implemented, you can now begin solving problems!
@@ -139,26 +142,51 @@
 //! Because Advent of Code provides a test case in the description of every problem, `lib_aoc` also comes with a macro for 
 //! deriving tests from your [`Solution`] implementations.
 //! 
-//! Assuming your [`loader`](Solver::load) already correctly loads the test case instead of the full input when prompted, all you need to do is implement 
+//! Assuming your [`load_test`](Solver::load_test) implementation already correctly loads test cases, all you need to do is implement 
 //! the [`Test`] trait on your solution to provide the expected results:
 //! ``` ignore
 //! impl Test<DAY_01> for Solutions {
-//!     fn expected() -> (Option<Self::Output>, Option<Self::Output>) {
-//!         (Some("PART_ONE_EXPECTED"), Some("PART_TWO_EXPECTED"))
+//!     fn expected(part: bool) -> Self::Output {
+//!         // If you don't know the expected result for a part yet, you can just
+//!         // substitute a panicking macro.
+//!         match part {
+//!             // PART_ONE and PART_TWO are constants from the prelude.
+//!             PART_ONE => 24_000,
+//!             PART_TWO => 34_000
+//!         }
 //!     }
-//! }
+//! } 
 //! ```
 //! Then you can invoke the [`derive_tests`] macro to auto-generate the tests:
 //! ``` ignore
 //! derive_tests!(Solutions, DAY_01);
 //! ```
 //! This expands into a new module with a test function for each part of the solution, and can be run normally via `cargo test`.
+//! 
+//! ## Notes on Benchmarking
+//! `lib_aoc` provides basic benchmarking of solution implementations via [`std::time::Instant`]. While the
+//! measurements it provides are good approximations, a crate like [`criterion`](https://docs.rs/criterion/latest/criterion/)
+//! is a better choice if you want a more rigorous solution.
+//! 
+//! Also note that execution clock is started *after* your [`Solver::load`] implementation returns, 
+//! immediately before [`Solution::parse`] is invoked. This means the time spent loading the puzzle input is not considered
+//! by the benchmark.
+//! 
+//! ## Additional Customization Options
+//! By overriding the [`Solver::display`] and [`Solver::finalize`] methods, it's possible to define custom behavior
+//! that is invoked once a solution finishes executing. 
+//! 
+//! [`display`](Solver::display) has a default implementation that pretty-prints the solution outcome for only non-test runs, 
+//! while [`finalize`](Solver::finalize) defaults to a no-op. Both methods take a shared reference to [`Outcome<impl Debug>`] and
+//! a [`bool`] `testing` flag. 
+//! 
+//! Want to add some awesome extra behavior like submitting your solution to AoC right from the command line? You can do that here!
 
 mod macros;
 mod outcome;
 mod timer;
 
-mod days {
+mod constants {
     pub const DAY_01: u8 = 1;
     pub const DAY_02: u8 = 2;
     pub const DAY_03: u8 = 3;
@@ -184,21 +212,25 @@ mod days {
     pub const DAY_23: u8 = 23;
     pub const DAY_24: u8 = 24;
     pub const DAY_25: u8 = 25;
+    pub const PART_ONE: bool = false;
+    pub const PART_TWO: bool = true;
 }
 
 /// Library prelude; glob-import to bring all important items into scope.
 pub mod prelude {
-    pub use crate::*;
-    pub use crate::days::*;
+    pub use crate::{solve, solve_through, derive_tests};
+    pub use crate::outcome::{Outcome, Timings};
     pub use crate::{Solution, Solver, Test};
+    pub use crate::constants::*;
 }
 
 // This re-export is necessary for the solve_through! macro to work.
 #[doc(hidden)]
 pub use seq_macro::seq;
-pub use outcome::Outcome;
 
 use std::fmt::Debug;
+
+use outcome::Outcome;
 use timer::Timer;
 
 /// Implements the solution to a single Advent of Code problem.
@@ -232,7 +264,10 @@ pub trait Solution<const DAY: u8> : Solver {
     /// Execute the solution from start to finish. This method
     /// handles wiring everything together and should not be overriden.
     fn run(testing: bool) -> Outcome<Self::Output> {
-        let puzzle = Self::load(DAY, testing);
+        let puzzle = match testing {
+            false => Self::load(DAY),
+            true => Self::load_test(DAY)
+        };
         let mut timer = Timer::new();
 
         let input = Self::parse(&puzzle);
@@ -248,7 +283,7 @@ pub trait Solution<const DAY: u8> : Solver {
         let outcome = Outcome {
             part_one,
             part_two,
-            timer,
+            timings: timer.into(),
             day: DAY
         };
 
@@ -261,30 +296,39 @@ pub trait Solution<const DAY: u8> : Solver {
 /// Interface for testing Advent of Code puzzle solutions.
 /// 
 /// See [the getting started guide](crate) for more information.
+#[allow(unused_variables)]
 pub trait Test<const DAY: u8> : Solution<DAY> {
     /// Provides the expected results for the official test case.
     /// 
-    /// The default implementation of this method returns `(None, None)`,
-    /// which will panic the test cases derived by [`derive_tests`], so this
-    /// method must be overriden with the actual expected values for tests to work.
-    fn expected() -> (Option<Self::Output>, Option<Self::Output>);
+    /// The default implementation of this method panics, so it should
+    /// overriden with the actual expected values for tests to work.
+    fn expected(part: bool) -> Self::Output {
+        panic!("Expected input not provided.")
+    }
 }
 
 /// Interface for running Advent of Code puzzle solutions.
 /// 
 /// See [the getting started guide](crate) for more information.
+#[allow(unused_variables)]
 pub trait Solver {
-    /// Load the puzzle input matching the parameters.
-    fn load(day: u8, testing: bool) -> String;
+    /// Load the full puzzle input for the specified day.
+    fn load(day: u8) -> String;
+
+    /// Load the test puzzle input for the specified day.
+    /// 
+    /// The default implementation of this method panics;
+    /// override it if you intend to use `lib_aoc`'s testing
+    /// features.
+    fn load_test(day: u8) -> String {
+        panic!("Test loading has not been implemented.")
+    }
 
     /// Callback executed after puzzle completion.
     /// 
     /// The default implementation of this method is a no-op;
     /// override it to add custom behavior.
-    #[allow(unused_variables)]
-    fn finalize(outcome: &Outcome<impl Debug>, testing: bool) {
-
-    }
+    fn finalize(outcome: &Outcome<impl Debug>, testing: bool) { }
 
     /// Callback executed after puzzle completion to print the outcome.
     /// 
