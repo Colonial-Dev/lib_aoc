@@ -1,10 +1,13 @@
-use std::{fmt::{Debug, Display, Write}, time::Duration};
+use std::{
+    fmt::{Display, Write},
+    time::Duration
+};
 use colored::{Colorize, ColoredString};
 
 use crate::Timer;
 
 /// Represents the final product of a [`Solution`](crate::Solution).
-pub struct Outcome<T: Debug> {
+pub struct Outcome<T: Display> {
     /// The computed answer to part one, if any.
     pub part_one: Option<T>,
     /// The computer answer to part two, if any.
@@ -15,7 +18,7 @@ pub struct Outcome<T: Debug> {
     pub day: u8,
 }
 
-impl<T: Debug> Display for Outcome<T> {
+impl<T: Display> Display for Outcome<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f)?;
         writeln!(f, "--- DAY {} ---", self.day.to_string().bright_cyan().bold())?;
@@ -33,9 +36,9 @@ impl<T: Debug> Display for Outcome<T> {
     }
 }
 
-fn format_answer(ans: &Option<impl Debug>) -> ColoredString {
+fn format_answer(ans: &Option<impl Display>) -> ColoredString {
     match ans {
-        Some(answer) => format!("{answer:?}").green(),
+        Some(answer) => format!("{answer}").green(),
         None => "unimplemented".red()
     }
 }

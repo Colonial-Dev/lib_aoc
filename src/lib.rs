@@ -105,26 +105,24 @@
 //!             .collect::<Vec<_>>() 
 //!     }
 //! 
-//!     fn part_one(input: &Self::Input<'_>) -> Option<Self::Output> {
+//!     fn part_one(input: &Self::Input<'_>) -> Self::Output {
 //!         input.iter()
 //!             .sum::<u64>()
-//!             .into()
 //!     }
 //!
-//!     fn part_two(input: &Self::Input<'_>) -> Option<Self::Output> {
+//!     fn part_two(input: &Self::Input<'_>) -> Self::Output {
 //!         input.iter()
 //!             .map(|x| x.pow(2) )
 //!             .sum::<u64>()
-//!             .into()
 //!     }
 //! }
 //! ```
 //! As you can see, the signatures of the solver methods are identical apart from their names - they take
-//! a shared reference to a value of type [`Input`](Solution::Input) and return an [`Option<Output>`]. 
+//! a shared reference to a value of type [`Input`](Solution::Input) and return an [`Output`](Solution::Output). 
 //! 
-//! The default implementations simply return [`None`], which is how `lib_aoc` knew to display 
-//! `unimplemented` when the program was run earlier. By overriding them with implementations that return [`Some`],
-//! the result will be displayed instead:
+//! The default implementations of these methods *panic*, which (by using [`std::panic::catch_unwind`]) is how `lib_aoc` 
+//! knew to display `unimplemented` when the program was run earlier. By overriding them with implementations that 
+//! *don't* panic and instead return a proper value, the result will be displayed instead:
 //! ``` shell
 //! --- DAY 1 ---
 //! Part 1: 66306
@@ -174,11 +172,10 @@
 //! 
 //! ## Additional Customization Options
 //! By overriding the [`Solver::display`] and [`Solver::finalize`] methods, it's possible to define custom behavior
-//! that is invoked once a solution finishes executing. 
+//! that is invoked once a solution finishes executing in a non-test context.
 //! 
-//! [`display`](Solver::display) has a default implementation that pretty-prints the solution outcome for only non-test runs, 
-//! while [`finalize`](Solver::finalize) defaults to a no-op. Both methods take a shared reference to [`Outcome<impl Debug>`] and
-//! a [`bool`] `testing` flag. 
+//! [`display`](Solver::display) has a default implementation that pretty-prints the solution outcome,
+//! while [`finalize`](Solver::finalize) defaults to a no-op. Both methods take a shared reference to an [`Outcome<impl Display>`].
 //! 
 //! Want to add some awesome extra behavior like submitting your solution to AoC right from the command line? You can do that here!
 
@@ -228,7 +225,10 @@ pub mod prelude {
 #[doc(hidden)]
 pub use seq_macro::seq;
 
-use std::fmt::Debug;
+use std::{
+    fmt::{Display, Debug},
+    panic::{self, UnwindSafe, RefUnwindSafe}
+};
 
 use outcome::Outcome;
 use timer::Timer;
@@ -244,39 +244,36 @@ pub trait Solution<const DAY: u8> : Solver {
     /// The generic lifetime parameter `<'i>` can typically be elided; it is only
     /// necessary if the concrete type definition contains references to the puzzle input
     /// or other data.
-    type Input<'i>;
+    type Input<'i>: RefUnwindSafe;
     /// The type representing the puzzle's solution.
-    type Output: Debug;
+    type Output: Display;
 
     /// Parse textual puzzle input into a value of type [`Input`](Solution::Input).
     fn parse(puzzle: &str) -> Self::Input<'_>;
 
     /// Compute the solution to part one of the problem.
-    fn part_one(input: &Self::Input<'_>) -> Option<Self::Output> {
-        None
+    fn part_one(input: &Self::Input<'_>) -> Self::Output {
+        panic::panic_any(Unimplemented {})
     }
 
     /// Compute the solution to part two of the problem.
-    fn part_two(input: &Self::Input<'_>) -> Option<Self::Output> {
-        None
+    fn part_two(input: &Self::Input<'_>) -> Self::Output {
+        panic::panic_any(Unimplemented {})
     }
 
     /// Execute the solution from start to finish. This method
     /// handles wiring everything together and should not be overriden.
-    fn run(testing: bool) -> Outcome<Self::Output> {
-        let puzzle = match testing {
-            false => Self::load(DAY),
-            true => Self::load_test(DAY)
-        };
+    fn run() -> Outcome<Self::Output> {
+        let puzzle = Self::load(DAY);
         let mut timer = Timer::new();
 
         let input = Self::parse(&puzzle);
         timer.mark("Parsing");
 
-        let part_one = Self::part_one(&input);
+        let part_one = catch_unimplemented(|| Self::part_one(&input));
         timer.mark("Part 1");
 
-        let part_two = Self::part_two(&input);
+        let part_two = catch_unimplemented(|| Self::part_two(&input));
         timer.mark("Part 2");
         timer.mark_total("Total");
 
@@ -287,10 +284,49 @@ pub trait Solution<const DAY: u8> : Solver {
             day: DAY
         };
 
-        Self::display(&outcome, testing);
-        Self::finalize(&outcome, testing);
+        Self::display(&outcome);
+        Self::finalize(&outcome);
         outcome
     }
+}
+
+/// Marker struct used to indicate panics triggered by unimplemented solutions.
+struct Unimplemented {}
+
+fn catch_unimplemented<T, F>(operation: F) -> Option<T> where 
+    T: Display,
+    F: Fn() -> T + UnwindSafe
+{   
+    // Install a custom panic hook that surpresses output *only* for
+    // panics generated by unimplemented solutions, indicated by a payload
+    // of the unit type.
+    let noisy_hook = panic::take_hook();
+    panic::set_hook(
+        Box::new(move |panic| {
+            match panic.payload().downcast_ref::<Unimplemented>()
+            {
+                Some(_) => (),
+                None => noisy_hook(panic)
+            }
+        })
+    );
+
+    let outcome = match panic::catch_unwind(operation) {
+        Ok(result) => Some(result),
+        Err(panic) => {
+            match panic.downcast_ref::<Unimplemented>()
+            {
+                Some(_) => None,
+                None => {
+                    let _ = panic::take_hook();
+                    panic::resume_unwind(panic);
+                }
+            }
+        }
+    };
+
+    let _ = panic::take_hook();
+    outcome
 }
 
 /// Interface for testing Advent of Code puzzle solutions.
@@ -303,7 +339,7 @@ pub trait Test<const DAY: u8> : Solution<DAY> {
     /// The default implementation of this method panics, so it should
     /// overriden with the actual expected values for tests to work.
     fn expected(part: bool) -> Self::Output {
-        panic!("Expected input not provided.")
+        panic!("Expected inputs not provided.")
     }
 }
 
@@ -328,15 +364,63 @@ pub trait Solver {
     /// 
     /// The default implementation of this method is a no-op;
     /// override it to add custom behavior.
-    fn finalize(outcome: &Outcome<impl Debug>, testing: bool) { }
+    fn finalize(outcome: &Outcome<impl Display>) {
+
+    }
 
     /// Callback executed after puzzle completion to print the outcome.
     /// 
-    /// The default implementation of this method pretty-prints the outcome
-    /// only for non-test runs.
-    fn display(outcome: &Outcome<impl Debug>, testing: bool) {
-        if !testing {
-            print!("{outcome}")
+    /// The default implementation of this method pretty-prints the outcome.
+    fn display(outcome: &Outcome<impl Display>) {
+        print!("{outcome}")
+    }
+}
+
+/// Wrapper enum for problems with answer types that differ between parts.
+/// 
+/// Example usage:
+/// ``` no_run
+/// # use lib_aoc::prelude::*;
+/// # struct Solutions {}
+/// # impl Solver for Solutions {
+/// #   fn load(day: u8) -> String { panic!() }
+/// #   fn load_test(day: u8) -> String { panic!() }
+/// # }
+/// use lib_aoc::Split;
+/// 
+/// impl Solution<DAY_01> for Solutions {
+///     type Input<'i> = usize;
+///     type Output = Split<usize, String>;
+///     
+///     fn parse(puzzle: &str) -> Self::Input<'_> {
+///         puzzle.parse::<usize>().unwrap()
+///     }
+/// 
+///     fn part_one(input: &Self::Input<'_>) -> Self::Output {
+///         Split::P1(*input)
+///     }
+/// 
+///     fn part_two(input: &Self::Input<'_>) -> Self::Output {
+///         Split::P2(input.to_string())
+///     }
+/// }
+#[derive(Debug, PartialEq, Eq)]
+pub enum Split<A, B> where
+    A: Display + Debug,
+    B: Display + Debug
+{
+    P1(A),
+    P2(B)
+}
+
+impl<A, B> Display for Split<A, B> where
+    A: Display + Debug,
+    B: Display + Debug
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Split::P1(value) => write!(f, "{value}"),
+            Split::P2(value) => write!(f, "{value}")
         }
     }
 }

@@ -6,7 +6,7 @@
 #[macro_export]
 macro_rules! solve {
     ($sols:ty, $day:expr) => {
-        <$sols as ::lib_aoc::Solution<$day>>::run(false);
+        <$sols as ::lib_aoc::Solution<$day>>::run();
     };
 }
 
@@ -23,7 +23,7 @@ macro_rules! solve {
 macro_rules! solve_through {
     ($sols:ty, $up_to:literal) => {
         ::lib_aoc::seq!(N in 1..=$up_to {
-            <$sols as ::lib_aoc::Solution<N>>::run(false);
+            <$sols as ::lib_aoc::Solution<N>>::run();
         })
     };
 }
@@ -47,15 +47,19 @@ macro_rules! derive_tests {
             #[test]
             fn part_one() {
                 let expected = <$sols as ::lib_aoc::Test<$day>>::expected(false);
-                let outcome = <$sols as ::lib_aoc::Solution<$day>>::run(true).part_one;
-                assert_eq!(outcome, Some(expected));
+                let input = <$sols as ::lib_aoc::Solver>::load_test($day);
+                let parsed = <$sols as ::lib_aoc::Solution<$day>>::parse(&input);
+                let outcome = <$sols as ::lib_aoc::Solution<$day>>::part_one(&parsed);
+                assert_eq!(outcome, expected);
             }
 
             #[test]
             fn part_two() {
                 let expected = <$sols as ::lib_aoc::Test<$day>>::expected(true);
-                let outcome = <$sols as ::lib_aoc::Solution<$day>>::run(true).part_two;
-                assert_eq!(outcome, Some(expected));
+                let input = <$sols as ::lib_aoc::Solver>::load_test($day);
+                let parsed = <$sols as ::lib_aoc::Solution<$day>>::parse(&input);
+                let outcome = <$sols as ::lib_aoc::Solution<$day>>::part_two(&parsed);
+                assert_eq!(outcome, expected);
             }
         }
     };
