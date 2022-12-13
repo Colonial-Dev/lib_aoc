@@ -1,5 +1,9 @@
 # Changelog
 
+# v 0.7.2
+- Improved precision of the `Timing` type's `Display` implementation; measurements are displayed as floats and in the closest correct unit, rather
+than as integers and in micros/nanos only.
+
 # v 0.7.1
 - Added the `solution_array` macro, which generates an array of solution closures. This is useful if you'd like to defer picking which solution
 to execute until runtime.

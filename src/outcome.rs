@@ -73,12 +73,11 @@ impl Display for Timings {
         let mut output = String::new();
 
         let mut write_timing = |time: &Duration, name: &str| {
+            let (time, units) = format_duration(time);
             writeln!(
                 output,
-                "{}: {} μs / {} ns",
-                name.bold(),
-                time.as_micros().to_string().green(),
-                time.as_nanos().to_string().green()
+                "{}: {time} {units}",
+                name.bold()
             )
         };
 
@@ -90,4 +89,20 @@ impl Display for Timings {
         write!(f, "{}", output.trim())?;
         Ok(())
     }
+}
+
+fn format_duration(value: &Duration) -> (String, ColoredString) {
+    let (time, units): (String, String) = format!("{value:?}")
+        .chars()
+        .partition(|char| char.is_numeric() || char == &'.' || char == &',');
+
+
+    let units = match units.as_str() {
+        "ns" => units.cyan(),
+        "µs" => units.green(),
+        "ms" => units.yellow(),
+        _ => units.red()
+    };
+
+    (time, units)
 }

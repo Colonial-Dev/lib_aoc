@@ -83,12 +83,12 @@
 //! --- DAY 1 ---
 //! Part 1: unimplemented
 //! Part 2: unimplemented
-//!
-//! --- BENCH (DEBUG) ---
-//! Parsing: 0 μs / 133 ns
-//! Part 1: 0 μs / 53 ns
-//! Part 2: 0 μs / 46 ns
-//! Total: 0 μs / 436 ns
+//! 
+//! --- BENCH (RELEASE) ---
+//! Parsing: 20 ns
+//! Part 1: 20 ns
+//! Part 2: 20 ns
+//! Total: 60 ns
 //! ```
 //! It looks like the actual solution logic is unimplemented! Fortunately, that's easy to fix - we just implement
 //! the [`part_one`](Solution::part_one) and [`part_two`](Solution::part_two) methods.
@@ -125,14 +125,14 @@
 //! *don't* panic and instead return a proper value, the result will be displayed instead:
 //! ``` shell
 //! --- DAY 1 ---
-//! Part 1: 66306
-//! Part 2: 195292
-//!
-//! --- BENCH (DEBUG) ---
-//! Parsing: 533 μs / 533339 ns
-//! Part 1: 0 μs / 67 ns
-//! Part 2: 0 μs / 976 ns
-//! Total: 534 μs / 534839 ns
+//! Part 1: 2506
+//! Part 2: 95843
+//! 
+//! --- BENCH (RELEASE) ---
+//! Parsing: 7.223 µs
+//! Part 1: 73.838 µs
+//! Part 2: 81.042 µs
+//! Total: 162.244 µs
 //! ```
 //! And that's it - you've implemented a solution!
 //! 
