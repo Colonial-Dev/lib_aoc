@@ -28,6 +28,34 @@ macro_rules! solve_through {
     };
 }
 
+/// Generates an array of solution closures. Useful if you'd like to defer
+/// picking which solution to execute until runtime.
+/// 
+/// Example usage:
+/// ``` ignore
+/// fn main() {
+///     let sol_arr = solution_array!(Solutions, 25);
+///     let target = std::env::var("SOLUTION")
+///         .unwrap()
+///         .parse::<usize>()
+///         .unwrap();
+/// 
+///     sol_arr[target - 1]();
+/// }
+/// ```
+#[macro_export]
+macro_rules! solution_array {
+    ($sols:ty, $up_to:literal) => {
+        ::lib_aoc::seq!(N in 1..=$up_to {
+            [
+                #(
+                || { <$sols as ::lib_aoc::Solution<N>>::run(); },
+                )*
+            ]
+        })
+    };
+}
+
 /// Derive test cases for a day's solution.
 /// 
 /// In order, the parameters are:

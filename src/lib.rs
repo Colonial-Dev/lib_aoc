@@ -215,7 +215,7 @@ mod constants {
 
 /// Library prelude; glob-import to bring all important items into scope.
 pub mod prelude {
-    pub use crate::{solve, solve_through, derive_tests};
+    pub use crate::{solve, solve_through, solution_array, derive_tests};
     pub use crate::outcome::{Outcome, Timings};
     pub use crate::{Solution, Solver, Test};
     pub use crate::constants::*;
