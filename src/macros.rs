@@ -75,7 +75,7 @@ macro_rules! derive_tests {
             #[test]
             fn part_one() {
                 let expected = <$sols as ::lib_aoc::Test<$day>>::expected(false);
-                let input = <$sols as ::lib_aoc::Solver>::load_test($day);
+                let input = <$sols as ::lib_aoc::Solver>::load_test($day, PART_ONE);
                 let parsed = <$sols as ::lib_aoc::Solution<$day>>::parse(&input);
                 let outcome = <$sols as ::lib_aoc::Solution<$day>>::part_one(&parsed);
                 assert_eq!(outcome, expected);
@@ -84,7 +84,7 @@ macro_rules! derive_tests {
             #[test]
             fn part_two() {
                 let expected = <$sols as ::lib_aoc::Test<$day>>::expected(true);
-                let input = <$sols as ::lib_aoc::Solver>::load_test($day);
+                let input = <$sols as ::lib_aoc::Solver>::load_test($day, PART_TWO);
                 let parsed = <$sols as ::lib_aoc::Solution<$day>>::parse(&input);
                 let outcome = <$sols as ::lib_aoc::Solution<$day>>::part_two(&parsed);
                 assert_eq!(outcome, expected);

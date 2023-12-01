@@ -1,5 +1,8 @@
 # Changelog
 
+# v 0.8.0
+- The `Solver` trait's `load_test` method now takes a boolean indicating which part is being tested. (The constants `PART_ONE` and `PART_TWO` from the prelude can be used when branching on this value.)
+
 # v 0.7.2
 - Improved precision of the `Timing` type's `Display` implementation; measurements are displayed as floats and in the closest correct unit, rather
 than as integers and in micros/nanos only.

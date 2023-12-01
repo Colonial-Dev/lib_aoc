@@ -36,7 +36,7 @@ impl Solver for Solutions {
     
     // Note that a test loading implementation can be elided if one is not desired;
     // the default implementation will simply panic.
-    fn load_test(day: u8) -> String {
+    fn load_test(day: u8, part: bool) -> String {
         std::fs::read_to_string(format!("src/inputs/test_{day:02}.txt"))
             .expect("Puzzle input could not be read.")
     }

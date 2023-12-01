@@ -37,7 +37,7 @@
 //!     
 //!     // Note that a test loading implementation can be elided if one is not desired;
 //!     // the default implementation will simply panic.
-//!     fn load_test(day: u8) -> String {
+//!     fn load_test(day: u8, part: bool) -> String {
 //!         std::fs::read_to_string(format!("src/inputs/test_{day:02}.txt"))
 //!             .expect("Puzzle input could not be read.")
 //!     }
@@ -351,12 +351,12 @@ pub trait Solver {
     /// Load the full puzzle input for the specified day.
     fn load(day: u8) -> String;
 
-    /// Load the test puzzle input for the specified day.
+    /// Load the test puzzle input for the specified day and (optionally) part.
     /// 
     /// The default implementation of this method panics;
     /// override it if you intend to use `lib_aoc`'s testing
     /// features.
-    fn load_test(day: u8) -> String {
+    fn load_test(day: u8, part: bool) -> String {
         panic!("Test loading has not been implemented.")
     }
 
@@ -384,7 +384,7 @@ pub trait Solver {
 /// # struct Solutions {}
 /// # impl Solver for Solutions {
 /// #   fn load(day: u8) -> String { panic!() }
-/// #   fn load_test(day: u8) -> String { panic!() }
+/// #   fn load_test(day: u8, part: bool) -> String { panic!() }
 /// # }
 /// use lib_aoc::Split;
 /// 
